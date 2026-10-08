@@ -129,3 +129,24 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-heig
 .typing-mode .word { font-size: clamp(26px, 7.5vw, 36px); }
 .typing-mode .word.long { font-size: clamp(23px, 6.8vw, 31px); }
 .typing-mode .tap-hint { display: none; }
+
+.mode-switch { display: flex; align-self: center; background: #eaece7; border-radius: 12px; padding: 3px; margin: 4px 0; }
+.mode-switch button { background: transparent; color: #899186; border-radius: 9px; min-height: 40px; padding: 8px 22px; font-size: 13px; }
+.mode-switch button[aria-pressed="true"] { background: #fafbf8; color: #52735b; box-shadow: 0 2px 7px #27372106; }
+.pairs-stage { flex: 1; min-height: 360px; position: relative; display: flex; flex-direction: column; padding-bottom: 10px; }
+.pairs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pairs-column { display: grid; grid-template-rows: 18px repeat(5, minmax(62px, auto)); gap: 10px; align-content: start; }
+.pairs-language { padding-left: 6px; color: #a0a69f; font-size: 11px; letter-spacing: 1.3px; }
+.pair-tile { min-width: 0; min-height: 62px; padding: 12px 10px; border: 1px solid #e4e7df; border-radius: 17px; background: #fff; color: #333a32; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; transition: background .18s, box-shadow .18s, border-color .18s; }
+.pair-tile.pair-selected { border-color: #90aa91; background: #edf2eb; box-shadow: 0 0 0 1px #90aa9138; }
+.pair-tile.pair-correct { border-color: #acd0b6; background: #edf8ed; box-shadow: 0 0 25px #9dcfa862, inset 0 0 18px #9dcfa830; }
+.pair-tile.pair-wrong { border-color: #dfb8b0; background: #fff0ee; box-shadow: 0 0 22px #e4aca64a; }
+.pair-tile.pair-gone { visibility: hidden; pointer-events: none; }
+.pairs-feedback { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 20px 4px 8px; }
+#pairs-correction { color: #6e776e; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.pairs-phase { color: #939b90; font-size: 12px; text-align: center; margin-top: 14px; min-height: 17px; }
+.pairs-complete { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; min-height: 330px; }
+.pairs-complete h1 { font-size: 30px; font-weight: 500; margin: 0; }
+.text-button { background: transparent; color: #899186; font-size: 14px; min-height: 44px; padding: 10px 22px; }
+.app:has(.pairs-stage:not(.hidden)) { height: auto; min-height: 100svh; max-height: none; }
+@media (max-width: 350px) { .pairs-grid { gap: 8px; } .pair-tile { font-size: 14px; padding: 10px 8px; } }

@@ -49,11 +49,11 @@ function loadState() {
         set.current = Math.min(set.current || 0, Math.max(0, set.queue.length - 1));
       });
       const session = saved.session && Array.isArray(saved.session.sourceIds) && saved.session.sourceIds.every(id => saved.sets.some(set => set.id === id)) ? saved.session : null;
-      return { sets: saved.sets, activeId: saved.activeId, session, typing: saved.typing === true, order: saved.order === 'random' ? 'random' : 'source', direction: saved.direction === 'ru-en' ? 'ru-en' : 'en-ru' };
+      return { mode: saved.mode === 'pairs' ? 'pairs' : 'cards', sets: saved.sets, activeId: saved.activeId, session, typing: saved.typing === true, order: saved.order === 'random' ? 'random' : 'source', direction: saved.direction === 'ru-en' ? 'ru-en' : 'en-ru' };
     }
   } catch { /* Start with the demo when browser storage is unavailable. */ }
   const first = freshSet('Первый набор');
-  return { sets: [first], activeId: first.id, typing: false, order: 'source', direction: 'en-ru' };
+  return { mode: 'cards', sets: [first], activeId: first.id, typing: false, order: 'source', direction: 'en-ru' };
 }
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -75,7 +75,22 @@ function render() {
   const sources = state.session ? state.sets.filter(item => state.session.sourceIds.includes(item.id)) : (set ? [set] : []);
   $('#sets-title').textContent = sources.length > 1 ? `Наборы · ${sources.length}` : sources[0]?.name || 'Наборы';
   $('#direction-select').value = state.direction;
+  const pairing = state.mode === 'pairs';
+  $('#cards-mode').setAttribute('aria-pressed', String(!pairing));
+  $('#pairs-mode').setAttribute('aria-pressed', String(pairing));
+  $('#pairs-stage').classList.toggle('hidden', !pairing);
+  $('.card-stage').classList.toggle('hidden', pairing);
+  $('#typing-toggle').classList.toggle('hidden', pairing);
+  $('#order-select').classList.toggle('hidden', pairing);
+  if (pairing && typeof renderPairs === 'function') {
+    $('.app').classList.remove('typing-mode');
+    $('#card-actions').classList.add('hidden');
+    $('#reset-button').disabled = !set;
+    renderPairs();
+    return;
+  }
   $('#order-select').value = state.order;
+  $('#progress-track').setAttribute('aria-label', 'Знакомые слова');
   const total = set?.words.length || 0;
   const done = set?.known.length || 0;
   $('#progress-count').textContent = `${done} / ${total}`;
@@ -134,12 +149,12 @@ function render() {
 }
 function reveal() {
   const set = activeSet();
-  if (state.typing || busy || drag || dialogOpen() || !set?.queue.length) return;
+  if (state.mode === 'pairs' || state.typing || busy || drag || dialogOpen() || !set?.queue.length) return;
   set.revealed = !set.revealed;
   render(); save();
 }
 function setLocked(locked) {
-  for (const selector of ['#again-button', '#know-button', '#sets-button', '#direction-select', '#order-select', '#reset-button', '#import-button', '#typing-toggle']) $(selector).disabled = locked;
+  for (const selector of ['#again-button', '#know-button', '#sets-button', '#direction-select', '#order-select', '#reset-button', '#import-button', '#typing-toggle', '#cards-mode', '#pairs-mode']) $(selector).disabled = locked;
   cardElement.setAttribute('aria-disabled', String(locked));
   syncTypedControls();
 }
@@ -159,14 +174,16 @@ function clearMotion() {
 function cancelInteraction() {
   motionToken++;
   drag = null;
-  for (const animation of cardElement.getAnimations()) animation.cancel();
+  for (const element of [cardElement, ...document.querySelectorAll('.pair-tile')]) {
+    for (const animation of element.getAnimations()) animation.cancel();
+  }
   busy = false;
   clearMotion();
   setLocked(false);
 }
 async function rate(known, from = { x: 0, y: 0 }) {
   const set = activeSet();
-  if (busy || !set?.queue.length || dialogOpen()) return;
+  if (state.mode === 'pairs' || busy || !set?.queue.length || dialogOpen()) return;
   if (state.typing && typedAttempt.phase !== (known ? 'correct' : 'review')) return;
   busy = true; drag = null; setLocked(true);
   const token = ++motionToken;
@@ -280,6 +297,7 @@ function resetRound() {
   resetTypedAttempt();
   const set = activeSet();
   if (!set) return;
+  if (state.mode === 'pairs' && typeof resetPairs === 'function') { resetPairs(); return; }
   set.queue = orderQueue(set.words.map((_, i) => i));
   set.known = []; set.current = 0; set.revealed = false;
   render(); save();
@@ -315,6 +333,7 @@ function importWords(words, filename = '') {
   const set = freshSet(name, words);
   set.queue = orderQueue(set.queue);
   state.sets.unshift(set); state.activeId = set.id; state.session = null;
+  if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null };
   render(); save();
   $('#import-dialog').close(); $('#file-input').value = ''; $('#paste-input').value = ''; $('#import-name').value = '';
 }
@@ -365,6 +384,7 @@ function renderSets() {
 }
 function startTraining(ids) {
   const sets = state.sets.filter(set => ids.includes(set.id));
+  if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null };
   if (!sets.length) return;
   cancelInteraction();
   if (sets.length === 1) {
@@ -382,8 +402,10 @@ function deleteSet(id) {
   resetTypedAttempt();
   state.sets = state.sets.filter(set => set.id !== id);
   selectedIds.delete(id);
+  if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null };
   if (state.session?.sourceIds.includes(id)) {
     const session = state.session;
+    delete session.matching;
     const remap = new Map();
     const words = [];
     session.words.forEach((word, index) => { if (word.sourceSetId !== id) { remap.set(index, words.length); words.push(word); } });
@@ -450,7 +472,7 @@ $('#know-button').addEventListener('click', () => rate(true));
 $('#reset-button').addEventListener('click', resetRound);
 $('#empty-reset').addEventListener('click', () => activeSet() ? resetRound() : $('#import-dialog').showModal());
 $('#direction-select').addEventListener('change', event => {
-  cancelInteraction(); state.direction = event.target.value; if (activeSet()) activeSet().revealed = false; render(); save();
+  cancelInteraction(); if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null }; state.direction = event.target.value; if (activeSet()) activeSet().revealed = false; render(); save();
 });
 $('#order-select').addEventListener('change', event => changeOrder(event.target.value));
 $('#sets-button').addEventListener('click', openSets);
@@ -463,15 +485,13 @@ for (const type of ['dragenter', 'dragover']) dropZone.addEventListener(type, ev
 for (const type of ['dragleave', 'drop']) dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.remove('dragging'); });
 dropZone.addEventListener('drop', event => importFile(event.dataTransfer.files[0]));
 document.addEventListener('keydown', event => {
-  if (state.typing || dialogOpen() || event.target.closest('textarea,select,input,button,summary') || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+  if (state.mode === 'pairs' || state.typing || dialogOpen() || event.target.closest('textarea,select,input,button,summary') || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); rate(event.key === 'ArrowRight'); }
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); reveal(); }
 });
 window.addEventListener('storage', event => {
-  if (event.key === STORAGE_KEY) { cancelInteraction(); resetTypedAttempt(); state = loadState(); render(); if ($('#sets-dialog').open) { selectedIds = new Set([...selectedIds].filter(id => state.sets.some(set => set.id === id))); renderSets(); } if ($('#delete-dialog').open) $('#delete-dialog').close(); }
+  if (event.key === STORAGE_KEY) { cancelInteraction(); resetTypedAttempt(); if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null }; state = loadState(); render(); if ($('#sets-dialog').open) { selectedIds = new Set([...selectedIds].filter(id => state.sets.some(set => set.id === id))); renderSets(); } if ($('#delete-dialog').open) $('#delete-dialog').close(); }
 });
-render();
-save();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('./sw.js').catch(() => { /* Online use remains available. */ });
 }

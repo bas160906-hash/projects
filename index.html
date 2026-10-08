@@ -26,6 +26,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </header>
+    <div class="mode-switch" role="group" aria-label="Режим тренировки">
+      <button id="cards-mode" aria-pressed="true">Карточки</button>
+      <button id="pairs-mode" aria-pressed="false">Пары</button>
+    </div>
     <div class="toolbar">
       <select id="direction-select" aria-label="Направление перевода">
         <option value="en-ru">EN → RU</option>
@@ -43,6 +47,20 @@
       <div id="progress-track" class="progress-track" role="progressbar" aria-label="Знакомые слова" aria-valuemin="0"><div id="progress-fill"></div></div>
       <span id="progress-count" aria-live="polite">0 / 20</span>
     </div>
+    <section id="pairs-stage" class="pairs-stage hidden" aria-label="Сопоставление слов">
+      <div id="pairs-grid" class="pairs-grid"></div>
+      <div id="pairs-feedback" class="pairs-feedback hidden" role="status">
+        <span id="pairs-correction"></span>
+        <button id="pairs-next" class="primary-button">Дальше</button>
+      </div>
+      <div id="pairs-complete" class="pairs-complete hidden">
+        <span class="complete-mark" aria-hidden="true">✓</span>
+        <h1 id="pairs-complete-title">Готово</h1>
+        <button id="pairs-check" class="primary-button">Проверить себя</button>
+        <button id="pairs-reset" class="text-button">Ещё раз</button>
+      </div>
+      <span id="pairs-phase" class="pairs-phase" aria-live="polite"></span>
+    </section>
     <section class="card-stage" aria-label="Карточки">
       <div class="stack-back" aria-hidden="true"></div>
       <div id="next-card" class="next-card" aria-hidden="true"><span id="next-word"></span></div>
@@ -105,5 +123,6 @@
     <div class="delete-actions"><button id="cancel-delete" class="primary-button">Отмена</button><button id="confirm-delete" class="action-button again">Удалить</button></div>
   </dialog>
   <script src="app.js"></script>
+  <script src="pairs.js"></script>
 </body>
 </html>
