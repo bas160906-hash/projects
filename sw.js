@@ -1,7 +1,7 @@
 const PREFIX = `wordloop:${self.registration.scope}:`;
-const CACHE = `${PREFIX}v5`;
+const CACHE = `${PREFIX}v6`;
 const ROOT = new URL('./', self.registration.scope).href;
-const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'pairs.js', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+const FILES = ['./', 'index.html', 'styles.css?v=6', 'app.js?v=6', 'pairs.js?v=6', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 const URLS = FILES.map(file => new URL(file, ROOT).href);
 
 self.addEventListener('install', event => {

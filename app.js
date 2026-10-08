@@ -493,5 +493,5 @@ window.addEventListener('storage', event => {
   if (event.key === STORAGE_KEY) { cancelInteraction(); resetTypedAttempt(); if (typeof pairSelection !== 'undefined') pairSelection = { left: null, right: null, first: null }; state = loadState(); render(); if ($('#sets-dialog').open) { selectedIds = new Set([...selectedIds].filter(id => state.sets.some(set => set.id === id))); renderSets(); } if ($('#delete-dialog').open) $('#delete-dialog').close(); }
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-  navigator.serviceWorker.register('./sw.js').catch(() => { /* Online use remains available. */ });
+  navigator.serviceWorker.register('./sw.js?v=6').catch(() => { /* Online use remains available. */ });
 }
